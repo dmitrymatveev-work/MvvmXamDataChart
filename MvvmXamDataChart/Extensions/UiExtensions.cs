@@ -18,16 +18,22 @@ namespace MvvmXamDataChart.Extensions
                 {
                     var key = new DataTemplateKey(type);
                     var template = element.TryFindResource(key) as DataTemplate;
-                    if (template != null)
-                    {
-                        var control = template.LoadContent() as FrameworkElement;
-                        if (control != null)
-                        {
-                            var binding = new Binding { Source = model };
-                            control.SetBinding(FrameworkElement.DataContextProperty, binding);
-                            return control;
-                        }
-                    }
+                    return template.MakeObject(model);
+                }
+            }
+            return null;
+        }
+
+        public static FrameworkElement MakeObject(this DataTemplate template, object dataContext)
+        {
+            if (template != null)
+            {
+                var control = template.LoadContent() as FrameworkElement;
+                if (control != null)
+                {
+                    var binding = new Binding { Source = dataContext };
+                    control.SetBinding(FrameworkElement.DataContextProperty, binding);
+                    return control;
                 }
             }
             return null;

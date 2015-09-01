@@ -1,15 +1,48 @@
-﻿using Infragistics.Controls.Charts;
+﻿using System;
+using System.Windows.Controls;
+using System.Windows.Data;
+using Infragistics.Controls.Charts;
 using MvvmXamDataChart.Extensions;
 using System.Collections;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using TechCollections.Extensions;
 
 namespace MvvmXamDataChart
 {
     public class MvvmXamDataChart : XamDataChart
     {
+        #region [ AxesTemplateSelector ]
+        public static readonly DependencyProperty AxesTemplateSelectorProperty = DependencyProperty.Register(
+            "AxesTemplateSelector",
+            typeof(DataTemplateSelector),
+            typeof(MvvmXamDataChart),
+            new PropertyMetadata(AxesTemplateSelectorChanged));
+
+        public DataTemplateSelector AxesTemplateSelector
+        {
+            get { return (DataTemplateSelector)this.GetValue(AxesTemplateSelectorProperty); }
+            set { this.SetValue(AxesTemplateSelectorProperty, value); }
+        }
+
+        private static void AxesTemplateSelectorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+        {
+            var chart = sender as MvvmXamDataChart;
+            if (chart != null)
+            {
+                chart.AxesSourceCollectionChanged(chart,
+                    new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                var newItems = new ArrayList();
+                if (chart.AxesSource != null)
+                    chart.AxesSource.ForEach(item => newItems.Add(item));
+                chart.AxesSourceCollectionChanged(chart,
+                    new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newItems));
+            }
+        }
+        #endregion
+
         #region [ AxesSource ]
         public static readonly DependencyProperty AxesSourceProperty = DependencyProperty.Register(
             "AxesSource",
@@ -73,7 +106,17 @@ namespace MvvmXamDataChart
                             if (found)
                                 continue;
 
-                            axis = this.GetDataTemplate(newItem) as Axis;
+                            if (this.AxesTemplateSelector != null)
+                            {
+                                var dataTemplate = this.AxesTemplateSelector.SelectTemplate(newItem, this);
+                                if (dataTemplate != null)
+                                    axis = dataTemplate.LoadContent() as Axis;
+                                if (axis != null)
+                                    axis.DataContext = newItem;
+                            }
+                            else
+                                axis = this.GetDataTemplate(newItem) as Axis;
+
                             if (axis != null)
                                 this.Axes.Add(axis);
                         }
@@ -97,6 +140,35 @@ namespace MvvmXamDataChart
         private void AxesSourcePropertyChanged(object sender, PropertyChangedEventArgs args)
         {
 
+        }
+        #endregion
+
+        #region [ SeriesTemplateSelector ]
+        public static readonly DependencyProperty SeriesTemplateSelectorProperty = DependencyProperty.Register(
+            "SeriesTemplateSelector",
+            typeof(DataTemplateSelector),
+            typeof(MvvmXamDataChart),
+            new PropertyMetadata(SeriesTemplateSelectorChanged));
+
+        public DataTemplateSelector SeriesTemplateSelector
+        {
+            get { return (DataTemplateSelector)this.GetValue(SeriesTemplateSelectorProperty); }
+            set { this.SetValue(SeriesTemplateSelectorProperty, value); }
+        }
+
+        private static void SeriesTemplateSelectorChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+        {
+            var chart = sender as MvvmXamDataChart;
+            if (chart != null)
+            {
+                chart.SeriesSourceCollectionChanged(chart,
+                    new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                var newItems = new ArrayList();
+                if(chart.SeriesSource != null)
+                    chart.SeriesSource.ForEach(item => newItems.Add(item));
+                chart.SeriesSourceCollectionChanged(chart,
+                    new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, newItems));
+            }
         }
         #endregion
 
@@ -142,7 +214,17 @@ namespace MvvmXamDataChart
                                 continue;
                             }
 
-                            series = this.GetDataTemplate(newItem) as Series;
+                            if (this.SeriesTemplateSelector != null)
+                            {
+                                var dataTemplate = this.SeriesTemplateSelector.SelectTemplate(newItem, this);
+                                if (dataTemplate != null)
+                                    series = dataTemplate.LoadContent() as Series;
+                                if (series != null)
+                                    series.DataContext = newItem;
+                            }
+                            else
+                                series = this.GetDataTemplate(newItem) as Series;
+
                             if (series != null)
                                 this.Series.Add(series);
                         }
@@ -163,6 +245,7 @@ namespace MvvmXamDataChart
                 }
             }
         }
+
         private void SeriesSourcePropertyChanged(object sender, PropertyChangedEventArgs args)
         {
 

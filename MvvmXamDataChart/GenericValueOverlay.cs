@@ -1,4 +1,8 @@
-﻿using Infragistics.Controls.Charts;
+﻿using System.Collections;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Linq;
+using Infragistics.Controls.Charts;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -6,11 +10,14 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using MvvmXamDataChart.Extensions;
+using TechCollections.Extensions;
 
 namespace MvvmXamDataChart
 {
     public class GenericValueOverlay : Series
     {
+        #region [ Axis ]
         public static readonly DependencyProperty AxisProperty = DependencyProperty.Register("Axis",
             typeof(Axis), typeof(GenericValueOverlay),
             new PropertyMetadata(null, (sender, args) =>
@@ -24,37 +31,129 @@ namespace MvvmXamDataChart
         {
             get { return (Axis)this.GetValue(AxisProperty); }
             set { this.SetValue(AxisProperty, value); }
-        }
+        } 
+        #endregion
 
-        public static readonly DependencyProperty PositionProperty = DependencyProperty.Register("Position",
-            typeof(object), typeof(GenericValueOverlay),
-            new PropertyMetadata(null, (sender, args) =>
+        #region [ Share ]
+        public static readonly DependencyProperty ShareProperty = DependencyProperty.Register("Share",
+            typeof(double), typeof(GenericValueOverlay),
+            new PropertyMetadata(default(double), (sender, args) =>
             {
                 var series = sender as GenericValueOverlay;
                 if (series != null)
-                    series.RaisePropertyChanged("Position", args.OldValue, args.NewValue);
+                {
+                    if (series.Axis is NumericYAxis)
+                    {
+                        var axis = series.Axis as NumericYAxis;
+                        series.YValue = axis.ActualMaximumValue - (axis.ActualMaximumValue - axis.ActualMinimumValue) * series.Share;
+                    }
+                    series.RaisePropertyChanged("Share", args.OldValue, args.NewValue);
+                }
             }));
 
-        public object Position
+        public double Share
         {
-            get { return this.GetValue(PositionProperty); }
-            set { this.SetValue(PositionProperty, value); }
+            get { return (double)this.GetValue(ShareProperty); }
+            set { this.SetValue(ShareProperty, value); }
+        } 
+        #endregion
+
+        public DataTemplate VerticalValueTemplate { get; set; }
+
+        public DataTemplate HorizontalValueTemplate { get; set; }
+
+        #region [ ValuesSource ]
+        public static readonly DependencyProperty ValuesSourceProperty = DependencyProperty.Register(
+            "ValuesSource",
+            typeof(IEnumerable),
+            typeof(GenericValueOverlay),
+            new PropertyMetadata(ValuesSourceChanged));
+
+        public IEnumerable ValuesSource
+        {
+            get { return (IEnumerable)this.GetValue(ValuesSourceProperty); }
+            set { this.SetValue(ValuesSourceProperty, value); }
         }
 
-        public static readonly DependencyProperty ValueProperty = DependencyProperty.Register("Value",
-            typeof(object), typeof(GenericValueOverlay),
-            new PropertyMetadata(null, (sender, args) =>
+        private static void ValuesSourceChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+        {
+            var valueOverlay = sender as GenericValueOverlay;
+            if (valueOverlay != null)
             {
-                var series = sender as GenericValueOverlay;
-                if (series != null)
-                    series.RaisePropertyChanged("Value", args.OldValue, args.NewValue);
-            }));
-
-        public object Value
-        {
-            get { return this.GetValue(ValueProperty); }
-            set { this.SetValue(ValueProperty, value); }
+                args.TryAddCollectionChangedHandler(valueOverlay.ValuesSourceCollectionChanged);
+                args.TryAddPropertyChangedHandler(valueOverlay.ValuesSourcePropertyChanged);
+            }
         }
+
+        private void ValuesSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)
+        {
+            if (args != null)
+            {
+                switch (args.Action)
+                {
+                    case NotifyCollectionChangedAction.Reset:
+                        this._labelPanel.Children.Clear();
+                        break;
+                    case NotifyCollectionChangedAction.Add:
+                        args.NewItems.ForEach(item =>
+                        {
+                            if (item != null)
+                            {
+                                var uiElement = item as UIElement;
+                                if (uiElement != null)
+                                    this._labelPanel.Children.Add(uiElement);
+                                else
+                                {
+                                    DataTemplate template;
+                                    if (this._xAxes.Contains(this.Axis.GetType()) && this.VerticalValueTemplate != null)
+                                        template = this.VerticalValueTemplate;
+                                    else if (this._yAxes.Contains(this.Axis.GetType()) && this.HorizontalValueTemplate != null)
+                                        template = this.HorizontalValueTemplate;
+                                    else
+                                        return;
+
+                                    var dataType = template.DataType as Type;
+
+                                    if (dataType == null || dataType == item.GetType() || item.GetType().IsSubclassOf(dataType)
+                                        || item.GetType().GetInterfaces().Any(iface => iface == dataType))
+                                    {
+                                        uiElement = template.MakeObject(item);
+                                        if (uiElement != null)
+                                            this._labelPanel.Children.Add(uiElement);
+                                    }
+                                }
+                            }
+                        });
+                        break;
+                    case NotifyCollectionChangedAction.Remove:
+                        args.OldItems.ForEach(item =>
+                        {
+                            if (item != null)
+                            {
+                                var uiElement = item as UIElement;
+                                if (uiElement != null)
+                                    this._labelPanel.Children.Remove(uiElement);
+                                else
+                                {
+                                    foreach (var child in this._labelPanel.Children.OfType<FrameworkElement>())
+                                        if (child.IsPropertyValueEquals(FrameworkElement.DataContextProperty, item))
+                                        {
+                                            this._labelPanel.Children.Remove(child);
+                                            break;
+                                        }
+                                }
+                            }
+                        });
+                        break;
+                }
+            }
+        }
+
+        private void ValuesSourcePropertyChanged(object sender, PropertyChangedEventArgs args)
+        {
+            
+        }
+        #endregion
 
         public GenericValueOverlay()
         {
@@ -62,17 +161,27 @@ namespace MvvmXamDataChart
         }
 
         private Line _line;
-        private FrameworkElement _label;
+        
+        private readonly StackPanel _labelPanel = new StackPanel
+        {
+            Orientation = Orientation.Vertical
+        };
+        public StackPanel LabelPanel
+        {
+            get { return this._labelPanel; }
+        }
 
         private readonly List<Type> _xAxes = new List<Type>
         {
             typeof(CategoryXAxis),
-            typeof(CategoryDateTimeXAxis)
+            typeof(CategoryDateTimeXAxis),
+            typeof(MvvmCategoryDateTimeXAxis)
         };
 
         private readonly List<Type> _yAxes = new List<Type>
         {
-            typeof(NumericYAxis)
+            typeof(NumericYAxis),
+            typeof(MvvmNumericYAxis)
         };
 
         protected override void RenderSeriesOverride(bool animate)
@@ -84,21 +193,11 @@ namespace MvvmXamDataChart
 
             var scalerParams = new ScalerParams(this.SeriesViewer.WindowRect, this.Viewport, Axis.IsInverted);
 
-            double position;
-            if (this.Position is DateTime)
-                position = this.Axis.GetScaledValue(((DateTime)this.Position).Ticks, scalerParams);
-            else
-                try
-                {
-                    position = this.Axis.GetScaledValue((double)Convert.ChangeType(this.Position, typeof(double)), scalerParams);
-                }
-                catch (Exception exc)
-                {
-                    //ErrorLog.Write(exc);
-                    return;
-                }
+            var value = this.GetValue();
+            
+            var position = this.Axis.GetScaledValue(value, scalerParams);
 
-            if (this._line == null || this._label == null)
+            if (this._line == null)
             {
                 this.RootCanvas.Children.Clear();
 
@@ -109,39 +208,7 @@ namespace MvvmXamDataChart
                     Opacity = this.Opacity
                 };
                 this.RootCanvas.Children.Add(this._line);
-
-                var labelStack = new StackPanel
-                {
-                    Orientation = Orientation.Vertical
-                };
-
-                this._label = labelStack;
-
-                var val = new TextBlock
-                {
-                    Margin = new Thickness(5, 5, 5, 2),
-                    Background =
-                        new SolidColorBrush(Color.FromArgb((byte)(255 * this.Opacity), 255, 255, 255)),
-                    FontWeight = FontWeights.Bold
-                };
-
-                var valBinding = new Binding("Value") { Source = this };
-                val.SetBinding(TextBlock.TextProperty, valBinding);
-
-                var pos = new TextBlock
-                {
-                    Margin = new Thickness(5, 5, 5, 2),
-                    Background = new SolidColorBrush(Color.FromArgb((byte)(255 * this.Opacity), 255, 255, 255)),
-                    Visibility = Visibility.Collapsed
-                };
-
-                var posBinding = new Binding("Position") { Source = this };
-                pos.SetBinding(TextBlock.TextProperty, posBinding);
-
-                labelStack.Children.Add(val);
-                labelStack.Children.Add(pos);
-
-                this.RootCanvas.Children.Add(this._label);
+                this.RootCanvas.Children.Add(this._labelPanel);
             }
             else
             {
@@ -157,8 +224,8 @@ namespace MvvmXamDataChart
                 this._line.Y1 = 0;
                 this._line.Y2 = this.RootCanvas.ActualHeight;
 
-                Canvas.SetTop(this._label, 0);
-                Canvas.SetLeft(this._label, position);
+                Canvas.SetTop(this._labelPanel, 0);
+                Canvas.SetLeft(this._labelPanel, position + this.Thickness / 2);
             }
             else if (this._yAxes.Contains(this.Axis.GetType()))
             {
@@ -167,9 +234,48 @@ namespace MvvmXamDataChart
                 this._line.Y1 = position;
                 this._line.Y2 = position;
 
-                Canvas.SetBottom(this._label, position);
-                Canvas.SetLeft(this._label, 0);
+                Canvas.SetBottom(this._labelPanel, this.RootCanvas.ActualHeight - position + this.Thickness / 2);
+                Canvas.SetLeft(this._labelPanel, 0);
             }
+        }
+
+        private double _yValue;
+        public double YValue
+        {
+            get
+            {
+                return this._yValue;
+            }
+            set
+            {
+                if (Math.Abs(this._yValue - value) > 0.000000001)
+                {
+                    var oldValue = this._yValue;
+                    this._yValue = value;
+                    this.RaisePropertyChanged("YValue", oldValue, this._yValue);
+                }
+            }
+        }
+
+        private double GetValue()
+        {
+            var value = default(double);
+            if (this.Axis is CategoryDateTimeXAxis)
+            {
+                var axis = this.Axis as CategoryDateTimeXAxis;
+                value = axis.ActualMinimumValue.Ticks + (axis.ActualMaximumValue - axis.ActualMinimumValue).Ticks * this.Share;
+            }
+            if (this.Axis is NumericYAxis)
+            {
+                value = this.YValue;
+            }
+            return value;
+        }
+
+        protected override AxisRange GetRange(Axis axis)
+        {
+            var value = this.GetValue();
+            return new AxisRange(value - 1, value + 1);
         }
 
         protected override void RenderThumbnail(Rect viewportRect, RenderSurface surface)
@@ -179,21 +285,11 @@ namespace MvvmXamDataChart
             if (this.Axis == null || this.RootCanvas == null)
                 return;
 
-            var scaleParams = new ScalerParams(new Rect(0, 0, 1, 1), viewportRect, this.Axis.IsInverted);
+            var scalerParams = new ScalerParams(new Rect(0, 0, 1, 1), viewportRect, this.Axis.IsInverted);
 
-            double x;
-            if (this.Position is DateTime)
-                x = this.Axis.GetScaledValue(((DateTime)this.Position).Ticks, scaleParams);
-            else
-                try
-                {
-                    x = this.Axis.GetScaledValue((double)Convert.ChangeType(this.Position, typeof(double)), scaleParams);
-                }
-                catch (Exception exc)
-                {
-                    //ErrorLog.Write(exc);
-                    return;
-                }
+            var value = this.GetValue();
+
+            var x = this.Axis.GetScaledValue(value, scalerParams);
 
             var lineElement = new Line
             {
@@ -251,9 +347,10 @@ namespace MvvmXamDataChart
                     }
                     break;
 
-                case "Position":
+                case "Share":
+                case "YValue":
                     {
-                        if (this.Position != null && this.Axis != null)
+                        if (this.Axis != null)
                         {
                             this.RenderSeries(false);
                             this.NotifyThumbnailDataChanged();

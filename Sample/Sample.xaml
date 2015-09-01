@@ -1,0 +1,10 @@
+﻿<Window x:Class="Sample.Sample"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mvvmXamDataChart="clr-namespace:MvvmXamDataChart;assembly=MvvmXamDataChart"
+        Title="MvvmXamDataChart - Sample" Height="600" Width="800">
+    <Grid DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=Window}, Path=ViewModel}">
+        
+        <mvvmXamDataChart:MvvmXamDataChart/>
+    </Grid>
+</Window>
