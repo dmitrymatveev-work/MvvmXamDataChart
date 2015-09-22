@@ -11,7 +11,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using MvvmXamDataChart.Extensions;
-using TechCollections.Extensions;
+using TechCollections;
 
 namespace MvvmXamDataChart
 {

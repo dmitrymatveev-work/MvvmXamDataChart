@@ -8,7 +8,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
-using TechCollections.Extensions;
+using TechCollections;
 
 namespace MvvmXamDataChart
 {
