@@ -271,31 +271,64 @@ namespace MvvmXamDataChart
 
         private static void XAxisSourceChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
         {
-            var series = sender as HorizontalAnchoredCategorySeries;
-            if (series != null && args.NewValue != null)
+            var categorySeries = sender as HorizontalAnchoredCategorySeries;
+            if (categorySeries != null)
             {
-                var xAxis = args.NewValue as CategoryAxisBase;
-                if (xAxis != null)
+                if (args.NewValue != null)
                 {
-                    series.XAxis = xAxis;
-                    return;
-                }
-
-                var chart = series.FindParent<XamDataChart>(parent => true);
-                if (chart != null)
-                    foreach (var axis in chart.Axes)
+                    var xAxis = args.NewValue as CategoryAxisBase;
+                    if (xAxis != null)
                     {
-                        xAxis = axis as CategoryAxisBase;
-                        if (xAxis != null && xAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
-                        {
-                            series.XAxis = xAxis;
-                            return;
-                        }
+                        categorySeries.XAxis = xAxis;
+                        return;
                     }
 
-                xAxis = series.GetDataTemplate(args.NewValue) as CategoryAxisBase;
-                if (xAxis != null && xAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
-                    series.XAxis = xAxis;
+                    var chart = categorySeries.FindParent<XamDataChart>(parent => true);
+                    if (chart != null)
+                        foreach (var axis in chart.Axes)
+                        {
+                            xAxis = axis as CategoryAxisBase;
+                            if (xAxis != null && xAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                            {
+                                categorySeries.XAxis = xAxis;
+                                return;
+                            }
+                        }
+
+                    xAxis = categorySeries.GetDataTemplate(args.NewValue) as CategoryAxisBase;
+                    if (xAxis != null && xAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                        categorySeries.XAxis = xAxis;
+                }
+            }
+
+            var scatterSeries = sender as ScatterBase;
+            if (scatterSeries != null)
+            {
+                if (args.NewValue != null)
+                {
+                    var xAxis = args.NewValue as NumericXAxis;
+                    if (xAxis != null)
+                    {
+                        scatterSeries.XAxis = xAxis;
+                        return;
+                    }
+
+                    var chart = scatterSeries.FindParent<XamDataChart>(parent => true);
+                    if (chart != null)
+                        foreach (var axis in chart.Axes)
+                        {
+                            xAxis = axis as NumericXAxis;
+                            if (xAxis != null && xAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                            {
+                                scatterSeries.XAxis = xAxis;
+                                return;
+                            }
+                        }
+
+                    xAxis = scatterSeries.GetDataTemplate(args.NewValue) as NumericXAxis;
+                    if (xAxis != null && xAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                        scatterSeries.XAxis = xAxis;
+                }
             }
         }
 
@@ -317,31 +350,64 @@ namespace MvvmXamDataChart
 
         private static void YAxisSourceChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
         {
-            var series = sender as HorizontalAnchoredCategorySeries;
-            if (series != null && args.NewValue != null)
+            var categorySeries = sender as HorizontalAnchoredCategorySeries;
+            if (categorySeries != null)
             {
-                var yAxis = args.NewValue as NumericYAxis;
-                if (yAxis != null)
+                if (args.NewValue != null)
                 {
-                    series.YAxis = yAxis;
-                    return;
-                }
-
-                var chart = series.FindParent<XamDataChart>(parent => true);
-                if (chart != null)
-                    foreach (var axis in chart.Axes)
+                    var yAxis = args.NewValue as NumericYAxis;
+                    if (yAxis != null)
                     {
-                        yAxis = axis as NumericYAxis;
-                        if (yAxis != null && yAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
-                        {
-                            series.YAxis = yAxis;
-                            return;
-                        }
+                        categorySeries.YAxis = yAxis;
+                        return;
                     }
 
-                yAxis = series.GetDataTemplate(args.NewValue) as NumericYAxis;
-                if (yAxis != null && yAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
-                    series.YAxis = yAxis;
+                    var chart = categorySeries.FindParent<XamDataChart>(parent => true);
+                    if (chart != null)
+                        foreach (var axis in chart.Axes)
+                        {
+                            yAxis = axis as NumericYAxis;
+                            if (yAxis != null && yAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                            {
+                                categorySeries.YAxis = yAxis;
+                                return;
+                            }
+                        }
+
+                    yAxis = categorySeries.GetDataTemplate(args.NewValue) as NumericYAxis;
+                    if (yAxis != null && yAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                        categorySeries.YAxis = yAxis;
+                }
+            }
+
+            var scatterSeries = sender as ScatterBase;
+            if (scatterSeries != null)
+            {
+                if (args.NewValue != null)
+                {
+                    var yAxis = args.NewValue as NumericYAxis;
+                    if (yAxis != null)
+                    {
+                        scatterSeries.YAxis = yAxis;
+                        return;
+                    }
+
+                    var chart = scatterSeries.FindParent<XamDataChart>(parent => true);
+                    if (chart != null)
+                        foreach (var axis in chart.Axes)
+                        {
+                            yAxis = axis as NumericYAxis;
+                            if (yAxis != null && yAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                            {
+                                scatterSeries.YAxis = yAxis;
+                                return;
+                            }
+                        }
+
+                    yAxis = scatterSeries.GetDataTemplate(args.NewValue) as NumericYAxis;
+                    if (yAxis != null && yAxis.IsPropertyValueEquals(FrameworkElement.DataContextProperty, args.NewValue))
+                        scatterSeries.YAxis = yAxis;
+                }
             }
         }
 
